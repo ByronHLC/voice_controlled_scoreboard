@@ -1,6 +1,6 @@
 import { COLORS } from './colors.js';
 
-const ADD_WORDS = ['加一分', '加分', '加一', '加1分'];
+const ADD_WORDS = ['加一分', '加分', '加一', '加1分', '+1'];
 const SUB_WORDS = ['扣一分', '扣分', '減一分', '扣一', '減一'];
 
 // 從一句逐字稿判斷「哪個顏色隊」「加分還是扣分」，抓不到就回傳 null
