@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>語音控制記分板</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="setup-screen" class="screen">
+  <h1>語音控制記分板</h1>
+
+  <label for="sport-select">球類</label>
+  <select id="sport-select">
+    <option value="badminton">羽球</option>
+    <option value="tabletennis">桌球</option>
+    <option value="squash">壁球</option>
+    <option value="tennis">網球</option>
+  </select>
+
+  <label for="mode-select">賽制</label>
+  <select id="mode-select">
+    <option value="single">單打</option>
+    <option value="double">雙打</option>
+  </select>
+
+  <div class="team-config">
+    <div>
+      <h2>隊伍 A</h2>
+      <select id="team-a-color"></select>
+    </div>
+    <div>
+      <h2>隊伍 B</h2>
+      <select id="team-b-color"></select>
+    </div>
+  </div>
+
+  <p id="setup-error" class="error hidden"></p>
+  <button id="start-match-btn">開始比賽</button>
+</div>
+
+<div id="scoreboard-screen" class="screen hidden">
+  <div id="mode-badge"></div>
+  <div id="match-over-banner" class="banner hidden"></div>
+
+  <div class="teams">
+    <div id="panel-a" class="team-panel">
+      <div id="team-a-label" class="team-label"></div>
+      <div id="score-a" class="score"></div>
+      <div id="sub-a" class="sub-score"></div>
+      <div class="controls">
+        <button data-team="A" data-delta="1">加一分</button>
+        <button data-team="A" data-delta="-1">扣一分</button>
+      </div>
+    </div>
+    <div id="panel-b" class="team-panel">
+      <div id="team-b-label" class="team-label"></div>
+      <div id="score-b" class="score"></div>
+      <div id="sub-b" class="sub-score"></div>
+      <div class="controls">
+        <button data-team="B" data-delta="1">加一分</button>
+        <button data-team="B" data-delta="-1">扣一分</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="undo-btn">復原上一步</button>
+    <button id="reset-btn">重新開始</button>
+    <button id="voice-toggle-btn">開啟收音模式</button>
+  </div>
+
+  <div id="transcript" class="transcript"></div>
+  <p class="hint">收音模式使用時請勿鎖螢幕；辨識不到時請直接用上方按鈕</p>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

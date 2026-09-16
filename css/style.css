@@ -1,0 +1,179 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  background: #111;
+  color: #fff;
+}
+
+.screen {
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 開賽設定畫面 */
+#setup-screen h1 {
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+#setup-screen label {
+  display: block;
+  margin: 16px 0 4px;
+  font-size: 16px;
+}
+
+#setup-screen select {
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 8px;
+  border: none;
+}
+
+.team-config {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.team-config > div {
+  flex: 1;
+}
+
+.team-config h2 {
+  font-size: 16px;
+  margin: 16px 0 4px;
+}
+
+.error {
+  color: #ff6b6b;
+  margin-top: 12px;
+}
+
+#start-match-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 16px;
+  font-size: 20px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+}
+
+/* 記分板畫面 */
+#scoreboard-screen {
+  padding: 12px;
+}
+
+#mode-badge {
+  text-align: center;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.banner {
+  text-align: center;
+  font-size: 20px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #ffd54f;
+  color: #111;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.teams {
+  display: flex;
+  gap: 8px;
+}
+
+.team-panel {
+  flex: 1;
+  border-radius: 16px;
+  padding: 16px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.team-label {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.score {
+  font-size: 88px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.sub-score {
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.controls button {
+  flex: 1;
+  padding: 14px 0;
+  font-size: 15px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  flex: 1;
+  min-width: 100px;
+  padding: 14px;
+  font-size: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #333;
+  color: #fff;
+}
+
+#voice-toggle-btn {
+  background: #2e7d32;
+}
+
+.transcript {
+  margin-top: 12px;
+  min-height: 24px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.hint {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 8px;
+}
