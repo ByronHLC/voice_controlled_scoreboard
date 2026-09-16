@@ -19,10 +19,13 @@ export function parseCommand(text) {
   return null;
 }
 
+const SILENCE_WATCHDOG_MS = 5000;
+
 export function createVoiceInput({ onCommand, onTranscript }) {
   let recognition = null;
   let active = false; // 使用者是否想要收音
   let muted = false; // 播報語音回饋時暫停收音，避免自我誤觸發
+  let heardAnything = false; // 這次 start() 之後，瀏覽器有沒有回報過任何事件
 
   function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -31,24 +34,43 @@ export function createVoiceInput({ onCommand, onTranscript }) {
     r.lang = 'zh-TW';
     r.continuous = true;
     r.interimResults = false;
+    r.onstart = () => {
+      heardAnything = true;
+      onTranscript('（收音中…請說話）');
+    };
     r.onresult = (e) => {
+      heardAnything = true;
       const last = e.results[e.results.length - 1];
       const text = last[0].transcript;
       onTranscript(text);
       const command = parseCommand(text);
       if (command) onCommand(command);
     };
-    r.onerror = () => {};
+    r.onerror = (e) => {
+      heardAnything = true;
+      onTranscript(`（語音辨識錯誤：${e.error}）`);
+    };
     r.onend = () => {
       if (active && !muted) {
         try {
           r.start();
         } catch (err) {
-          // 部分瀏覽器對「已在執行中」重複呼叫 start() 會丟例外，忽略即可
+          onTranscript(`（自動重啟失敗：${err.message || err}）`);
         }
       }
     };
     return r;
+  }
+
+  function armSilenceWatchdog() {
+    heardAnything = false;
+    setTimeout(() => {
+      if (active && !muted && !heardAnything) {
+        onTranscript(
+          '（沒有偵測到麥克風回應，請確認 Safari 網址列旁「aA」選單裡的網站設定已允許麥克風，或改用下方手動按鈕）'
+        );
+      }
+    }, SILENCE_WATCHDOG_MS);
   }
 
   return {
@@ -59,10 +81,11 @@ export function createVoiceInput({ onCommand, onTranscript }) {
         return false;
       }
       active = true;
+      armSilenceWatchdog();
       try {
         recognition.start();
       } catch (err) {
-        // 忽略重複啟動造成的例外
+        onTranscript(`（無法啟動語音辨識：${err.message || err}）`);
       }
       return true;
     },
