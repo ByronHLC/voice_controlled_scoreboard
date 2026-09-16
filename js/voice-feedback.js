@@ -17,15 +17,35 @@ export function buildAnnouncement(match, events, teamNames) {
   return match.engine.getSpokenScore(match.getState(), teamNames);
 }
 
+const SPEAK_WATCHDOG_MS = 6000;
+
 export function speak(text, { onEnd } = {}) {
-  if (!('speechSynthesis' in window)) {
-    if (onEnd) onEnd();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    onEnd && onEnd();
+  };
+
+  try {
+    if (!('speechSynthesis' in window)) {
+      finish();
+      return;
+    }
+    const synth = window.speechSynthesis;
+    if (synth.speaking || synth.pending) synth.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'zh-TW';
+    utter.onend = finish;
+    utter.onerror = finish;
+    synth.speak(utter);
+  } catch (err) {
+    finish();
     return;
   }
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'zh-TW';
-  utter.onend = () => onEnd && onEnd();
-  utter.onerror = () => onEnd && onEnd();
-  window.speechSynthesis.speak(utter);
+
+  // 保險：部分瀏覽器（尤其行動版 Safari）偶爾完全不觸發 onend/onerror，
+  // 逾時就強制視為播報完成，避免收音模式因此永久卡在靜音狀態
+  setTimeout(finish, SPEAK_WATCHDOG_MS);
 }
