@@ -17,13 +17,19 @@ export function buildAnnouncement(match, events, teamNames) {
   return match.engine.getSpokenScore(match.getState(), teamNames);
 }
 
-const SPEAK_WATCHDOG_MS = 6000;
+const SPEAK_WATCHDOG_MS = 2000;
+
+// 瀏覽器不會保證在播報期間持續持有 utterance 物件，若沒有另外保留參考，
+// 有些瀏覽器（尤其行動版）會提前把它回收，導致 onend/onerror 完全不觸發。
+// 用模組變數保留參考，播報完再釋放。
+let activeUtterance = null;
 
 export function speak(text, { onEnd } = {}) {
   let done = false;
   const finish = () => {
     if (done) return;
     done = true;
+    activeUtterance = null;
     onEnd && onEnd();
   };
 
@@ -39,13 +45,14 @@ export function speak(text, { onEnd } = {}) {
     utter.lang = 'zh-TW';
     utter.onend = finish;
     utter.onerror = finish;
+    activeUtterance = utter;
     synth.speak(utter);
   } catch (err) {
     finish();
     return;
   }
 
-  // 保險：部分瀏覽器（尤其行動版 Safari）偶爾完全不觸發 onend/onerror，
-  // 逾時就強制視為播報完成，避免收音模式因此永久卡在靜音狀態
+  // 保險：萬一 onend/onerror 真的沒觸發，逾時就強制視為播報完成，
+  // 避免收音模式因此永久卡在靜音狀態
   setTimeout(finish, SPEAK_WATCHDOG_MS);
 }
