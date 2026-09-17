@@ -1,8 +1,16 @@
 import { COLORS } from './colors.js';
 
-// 「加一」語音辨識常會被聽成同音的「佳音」「佳醫」，一併視為加分指令
-const ADD_WORDS = ['加一分', '加分', '加一', '加1分', '+1', '佳音', '佳醫'];
-const SUB_WORDS = ['扣一分', '扣分', '減一分', '扣一', '減一'];
+// 「加一」語音辨識常會被聽成同音字（佳音/佳醫），「一」也常被聽成得/的/壹，
+// 這裡盡量把常見的誤判排列組合都涵蓋進去
+const ADD_WORDS = [
+  '加一分', '加一', '加分', '加1分', '加壹分', '加壹', '+1',
+  '佳音', '佳醫', '加音', '加醫',
+  '得一分', '得一', '得分', '得意分', '的一分', '的一', '低一分',
+];
+const SUB_WORDS = [
+  '扣一分', '扣一', '扣分', '減一分', '減一', '減壹分', '扣壹分',
+  '少一分', '少一', '剪一分', '扣意分', '苦一分',
+];
 
 // 從一句逐字稿判斷「哪個顏色隊」「加分還是扣分」，抓不到就回傳 null
 export function parseCommand(text) {
@@ -25,7 +33,9 @@ const SILENCE_WATCHDOG_MS = 5000;
 export function createVoiceInput({ onCommand, onTranscript }) {
   let recognition = null;
   let active = false; // 使用者是否想要收音
-  let muted = false; // 播報語音回饋時暫停收音，避免自我誤觸發
+  // 有幾個「播報中」還沒恢復收音；用計數而非布林值，
+  // 避免兩句語音指令幾乎重疊觸發時互相干擾（見下方 mute/unmute 說明）
+  let muteDepth = 0;
   let heardAnything = false; // 這次 start() 之後，瀏覽器有沒有回報過任何事件
 
   function buildRecognition() {
@@ -52,7 +62,7 @@ export function createVoiceInput({ onCommand, onTranscript }) {
       onTranscript(`（語音辨識錯誤：${e.error}）`);
     };
     r.onend = () => {
-      if (active && !muted) {
+      if (active && muteDepth === 0) {
         try {
           r.start();
         } catch (err) {
@@ -66,7 +76,7 @@ export function createVoiceInput({ onCommand, onTranscript }) {
   function armSilenceWatchdog() {
     heardAnything = false;
     setTimeout(() => {
-      if (active && !muted && !heardAnything) {
+      if (active && muteDepth === 0 && !heardAnything) {
         onTranscript(
           '（沒有偵測到麥克風回應，請確認 Safari 網址列旁「aA」選單裡的網站設定已允許麥克風，或改用下方手動按鈕）'
         );
@@ -82,6 +92,7 @@ export function createVoiceInput({ onCommand, onTranscript }) {
         return false;
       }
       active = true;
+      muteDepth = 0;
       armSilenceWatchdog();
       try {
         recognition.start();
@@ -92,19 +103,37 @@ export function createVoiceInput({ onCommand, onTranscript }) {
     },
     stop() {
       active = false;
-      if (recognition) recognition.stop();
+      muteDepth = 0;
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (err) {
+          // 已經是停止狀態，忽略
+        }
+      }
     },
+    // 加分事件觸發播報前呼叫。用深度計數：如果已經有一個播報在等待恢復收音，
+    // 這次只需要把計數加一，不用（也不能）再呼叫一次 recognition.stop()，
+    // 否則兩句指令幾乎同時觸發時，第二次 stop() 會因為「已經是停止狀態」丟出
+    // InvalidStateError，若沒接住就會讓收音永遠卡在靜音、再也不會恢復。
     mute() {
-      muted = true;
-      if (recognition && active) recognition.stop();
+      muteDepth += 1;
+      if (muteDepth === 1 && recognition && active) {
+        try {
+          recognition.stop();
+        } catch (err) {
+          // 已經是停止狀態，忽略
+        }
+      }
     },
+    // 播報結束後呼叫。只有在所有重疊的播報都結束（計數歸零）才真的恢復收音。
     unmute() {
-      muted = false;
-      if (recognition && active) {
+      muteDepth = Math.max(0, muteDepth - 1);
+      if (muteDepth === 0 && recognition && active) {
         try {
           recognition.start();
         } catch (err) {
-          // 忽略重複啟動造成的例外
+          onTranscript(`（無法恢復收音：${err.message || err}）`);
         }
       }
     },
