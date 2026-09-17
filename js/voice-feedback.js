@@ -18,6 +18,10 @@ export function buildAnnouncement(match, events, teamNames) {
 }
 
 const SPEAK_WATCHDOG_MS = 2000;
+// 剛停止收音（麥克風關閉）的瞬間，iOS 的音訊工作階段還停留在錄音模式，
+// 這時候立刻播報常會被系統直接靜音、不出聲也不報錯。延遲一小段時間
+// 讓系統先切到播放模式，再真正開始播報。
+const SPEAK_START_DELAY_MS = 150;
 
 // 瀏覽器不會保證在播報期間持續持有 utterance 物件，若沒有另外保留參考，
 // 有些瀏覽器（尤其行動版）會提前把它回收，導致 onend/onerror 完全不觸發。
@@ -33,24 +37,32 @@ export function speak(text, { onEnd } = {}) {
     onEnd && onEnd();
   };
 
-  try {
-    if (!('speechSynthesis' in window)) {
-      finish();
-      return;
-    }
-    const synth = window.speechSynthesis;
-    if (synth.speaking || synth.pending) synth.cancel();
+  if (!('speechSynthesis' in window)) {
+    finish();
+    return;
+  }
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'zh-TW';
-    utter.onend = finish;
-    utter.onerror = finish;
-    activeUtterance = utter;
-    synth.speak(utter);
+  const synth = window.speechSynthesis;
+  try {
+    if (synth.speaking || synth.pending) synth.cancel();
   } catch (err) {
     finish();
     return;
   }
+
+  setTimeout(() => {
+    if (done) return;
+    try {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'zh-TW';
+      utter.onend = finish;
+      utter.onerror = finish;
+      activeUtterance = utter;
+      synth.speak(utter);
+    } catch (err) {
+      finish();
+    }
+  }, SPEAK_START_DELAY_MS);
 
   // 保險：萬一 onend/onerror 真的沒觸發，逾時就強制視為播報完成，
   // 避免收音模式因此永久卡在靜音狀態
