@@ -3,6 +3,7 @@ import { createMatch } from './match-state.js';
 import { render as renderScoreboard, showTranscript } from './scoreboard-ui.js';
 import { createVoiceInput } from './voice-input.js';
 import { buildAnnouncement, speak } from './voice-feedback.js';
+import { createMicMeter } from './mic-meter.js';
 
 const SPORT_LABELS = { badminton: '羽球', tabletennis: '桌球', squash: '壁球', tennis: '網球' };
 const MODE_LABELS = { single: '單打', double: '雙打' };
@@ -35,6 +36,32 @@ function populateColorSelects() {
   teamBColorSelect.value = 'red';
 }
 populateColorSelects();
+
+const micTestBtn = document.getElementById('mic-test-btn');
+const micMeterFill = document.getElementById('mic-meter-fill');
+const micMeter = createMicMeter({
+  onLevel: (level) => {
+    micMeterFill.style.width = `${Math.round(level * 100)}%`;
+  },
+  onError: (err) => {
+    alert(`無法開啟麥克風：${err.message || err}`);
+  },
+});
+let micTesting = false;
+micTestBtn.addEventListener('click', async () => {
+  if (micTesting) {
+    micMeter.stop();
+    micTesting = false;
+    micTestBtn.textContent = '測試麥克風音量';
+    micMeterFill.style.width = '0%';
+    return;
+  }
+  const ok = await micMeter.start();
+  if (ok) {
+    micTesting = true;
+    micTestBtn.textContent = '停止測試';
+  }
+});
 
 const voiceInput = createVoiceInput({
   onTranscript: (text) => showTranscript(`聽到：${text}`),

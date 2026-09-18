@@ -70,6 +70,35 @@ body {
   border-radius: 10px;
 }
 
+.mic-test {
+  margin-top: 20px;
+}
+
+.mic-test button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  background: #455a64;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+}
+
+#mic-meter-bar {
+  margin-top: 8px;
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+#mic-meter-fill {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 60ms linear;
+}
+
 /* 記分板畫面 */
 #scoreboard-screen {
   padding: 12px;
