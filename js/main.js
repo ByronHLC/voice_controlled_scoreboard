@@ -91,7 +91,27 @@ const voiceInput = createVoiceInput({
   },
 });
 
+// iOS Safari 的 speechSynthesis 第一次播報要在使用者點擊事件裡「同步」呼叫，
+// 才會把整個分頁後續的播報權限解鎖；經過 setTimeout 或等待其他非同步流程
+// 再呼叫，常常會被系統悄悄擋掉。這裡用一個無聲的假播報，在真正的點擊事件
+// 裡搶先解鎖，之後不管語音還是按鈕觸發的播報才會穩定出聲。
+function unlockSpeech() {
+  if (!('speechSynthesis' in window)) return;
+  try {
+    const utter = new SpeechSynthesisUtterance(' ');
+    utter.volume = 0;
+    utter.onstart = () => logDebug('unlock:started');
+    utter.onend = () => logDebug('unlock:onend');
+    utter.onerror = () => logDebug('unlock:onerror');
+    window.speechSynthesis.speak(utter);
+    logDebug('unlock:speak-called');
+  } catch (err) {
+    logDebug(`unlock:throw ${err.message || err}`);
+  }
+}
+
 startBtn.addEventListener('click', () => {
+  unlockSpeech();
   const sport = document.getElementById('sport-select').value;
   const mode = document.getElementById('mode-select').value;
   const aColor = teamAColorSelect.value;
@@ -143,6 +163,7 @@ voiceToggleBtn.addEventListener('click', () => {
     voiceInput.stop();
     voiceToggleBtn.textContent = '開啟收音模式';
   } else {
+    unlockSpeech();
     const ok = voiceInput.start();
     if (ok) voiceToggleBtn.textContent = '關閉收音模式';
   }
