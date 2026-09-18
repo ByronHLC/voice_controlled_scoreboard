@@ -1,8 +1,8 @@
 import { COLORS, colorById } from './colors.js';
 import { createMatch } from './match-state.js';
-import { render as renderScoreboard, showTranscript } from './scoreboard-ui.js';
+import { render as renderScoreboard, showTranscript, showRotationReminder } from './scoreboard-ui.js';
 import { createVoiceInput } from './voice-input.js';
-import { buildAnnouncement, speak } from './voice-feedback.js';
+import { buildAnnouncement, shouldRemindRotation, speak } from './voice-feedback.js';
 import { createMicMeter } from './mic-meter.js';
 
 const SPORT_LABELS = { badminton: '羽球', tabletennis: '桌球', squash: '壁球', tennis: '網球' };
@@ -37,6 +37,7 @@ if ('speechSynthesis' in window) {
 let match = null;
 let teamNames = null; // { A: '藍', B: '紅' }
 let colorIds = null; // { A: 'blue', B: 'red' }
+let isDoubleMode = false;
 
 function populateColorSelects() {
   for (const select of [teamAColorSelect, teamBColorSelect]) {
@@ -114,6 +115,7 @@ startBtn.addEventListener('click', () => {
   unlockSpeech();
   const sport = document.getElementById('sport-select').value;
   const mode = document.getElementById('mode-select').value;
+  isDoubleMode = mode === 'double';
   const aColor = teamAColorSelect.value;
   const bColor = teamBColorSelect.value;
 
@@ -174,7 +176,9 @@ function applyAction(team, delta, source) {
   const events = delta > 0 ? match.addPoint(team) : match.subtractPoint(team);
   renderScoreboard(match, teamNames);
 
-  const text = buildAnnouncement(match, events, teamNames);
+  const rotationOpts = { isDouble: isDoubleMode, isAdd: delta > 0 };
+  const text = buildAnnouncement(match, events, teamNames, rotationOpts);
+  showRotationReminder(shouldRemindRotation(events, rotationOpts) ? '請輪換發球位置' : null);
   logDebug(`applyAction[${source}] ${team} ${delta} -> "${text}"`);
   voiceInput.mute((reason) => {
     logDebug(`mute:confirmed:${reason}`);

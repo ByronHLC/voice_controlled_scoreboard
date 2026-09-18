@@ -1,5 +1,12 @@
+// 雙打時，發球方每得一分（非扣分修正）都提醒輪換發球位置；
+// 一局或整場結束時不疊加，那些情況本來就有自己的換邊/獲勝播報
+export function shouldRemindRotation(events, { isDouble, isAdd } = {}) {
+  if (!isDouble || !isAdd) return false;
+  return !events.some((e) => e.type === 'game_won' || e.type === 'match_won');
+}
+
 // 依比分事件組出要播報的中文句子
-export function buildAnnouncement(match, events, teamNames) {
+export function buildAnnouncement(match, events, teamNames, opts = {}) {
   const matchWon = events.find((e) => e.type === 'match_won');
   if (matchWon) return `比賽結束，${teamNames[matchWon.winner]}隊獲勝`;
 
@@ -10,11 +17,13 @@ export function buildAnnouncement(match, events, teamNames) {
     return text;
   }
 
+  const rotationSuffix = shouldRemindRotation(events, opts) ? '，請輪換發球位置' : '';
+
   if (events.some((e) => e.type === 'side_switch')) {
-    return `${match.engine.getSpokenScore(match.getState(), teamNames)}，請換邊`;
+    return `${match.engine.getSpokenScore(match.getState(), teamNames)}，請換邊${rotationSuffix}`;
   }
 
-  return match.engine.getSpokenScore(match.getState(), teamNames);
+  return `${match.engine.getSpokenScore(match.getState(), teamNames)}${rotationSuffix}`;
 }
 
 const SPEAK_WATCHDOG_MS = 2000;
