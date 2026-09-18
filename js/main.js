@@ -146,10 +146,11 @@ function applyAction(team, delta) {
 
   const text = buildAnnouncement(match, events, teamNames);
   logDebug(`applyAction ${team} ${delta} -> "${text}"`);
-  voiceInput.mute();
-  speak(text, {
-    onEnd: () => voiceInput.unmute(),
-    onDebug: (stage) => logDebug(`speak:${stage}`),
+  voiceInput.mute(() => {
+    speak(text, {
+      onEnd: () => voiceInput.unmute(),
+      onDebug: (stage) => logDebug(`speak:${stage}`),
+    });
   });
 
   if (events.some((e) => e.type === 'match_won')) {

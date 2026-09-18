@@ -29,6 +29,11 @@ export function parseCommand(text) {
 }
 
 const SILENCE_WATCHDOG_MS = 5000;
+// mute() 呼叫 recognition.stop() 後，iOS 實際釋放麥克風音訊工作階段所需的時間
+// 並不固定，若在真正釋放前就開始播報，常會被系統直接靜音吞掉。因此改成等
+// recognition 的 onend 事件（代表真的停了）才回呼；這個逾時只是防止 onend
+// 萬一沒觸發時的保險，不是主要判斷依據。
+const MUTE_STOP_WATCHDOG_MS = 800;
 
 export function createVoiceInput({ onCommand, onTranscript }) {
   let recognition = null;
@@ -37,6 +42,7 @@ export function createVoiceInput({ onCommand, onTranscript }) {
   // 避免兩句語音指令幾乎重疊觸發時互相干擾（見下方 mute/unmute 說明）
   let muteDepth = 0;
   let heardAnything = false; // 這次 start() 之後，瀏覽器有沒有回報過任何事件
+  let onStopConfirmed = null; // mute() 等待 recognition 真正停止時的回呼
 
   function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -62,6 +68,12 @@ export function createVoiceInput({ onCommand, onTranscript }) {
       onTranscript(`（語音辨識錯誤：${e.error}）`);
     };
     r.onend = () => {
+      if (onStopConfirmed) {
+        const cb = onStopConfirmed;
+        onStopConfirmed = null;
+        cb();
+        return;
+      }
       if (active && muteDepth === 0) {
         try {
           r.start();
@@ -116,14 +128,28 @@ export function createVoiceInput({ onCommand, onTranscript }) {
     // 這次只需要把計數加一，不用（也不能）再呼叫一次 recognition.stop()，
     // 否則兩句指令幾乎同時觸發時，第二次 stop() 會因為「已經是停止狀態」丟出
     // InvalidStateError，若沒接住就會讓收音永遠卡在靜音、再也不會恢復。
-    mute() {
+    // onStopped 會在麥克風真正停止（onend 事件）後才被呼叫，播報要等到那時候
+    // 才開始，避免音訊工作階段還沒切回可播放狀態就講話而被系統靜音吞掉。
+    mute(onStopped) {
       muteDepth += 1;
-      if (muteDepth === 1 && recognition && active) {
-        try {
-          recognition.stop();
-        } catch (err) {
-          // 已經是停止狀態，忽略
-        }
+      if (muteDepth !== 1 || !recognition || !active) {
+        onStopped && onStopped();
+        return;
+      }
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        onStopped && onStopped();
+      };
+      onStopConfirmed = settle;
+      setTimeout(settle, MUTE_STOP_WATCHDOG_MS);
+      try {
+        recognition.stop();
+      } catch (err) {
+        // 已經是停止狀態，忽略；直接視為已停止
+        onStopConfirmed = null;
+        settle();
       }
     },
     // 播報結束後呼叫。只有在所有重疊的播報都結束（計數歸零）才真的恢復收音。
