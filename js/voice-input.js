@@ -131,26 +131,28 @@ export function createVoiceInput({ onCommand, onTranscript }) {
     // InvalidStateError，若沒接住就會讓收音永遠卡在靜音、再也不會恢復。
     // onStopped 會在麥克風真正停止（onend 事件）後才被呼叫，播報要等到那時候
     // 才開始，避免音訊工作階段還沒切回可播放狀態就講話而被系統靜音吞掉。
+    // onStopped 會帶一個 reason 字串，方便除錯判斷這次是靠 onend 真的確認
+    // 停止，還是靠逾時保底硬猜的：'onend' | 'watchdog' | 'stop-threw' | 'skip'
     mute(onStopped) {
       muteDepth += 1;
       if (muteDepth !== 1 || !recognition || !active) {
-        onStopped && onStopped();
+        onStopped && onStopped('skip');
         return;
       }
       let settled = false;
-      const settle = () => {
+      const settle = (reason) => {
         if (settled) return;
         settled = true;
-        onStopped && onStopped();
+        onStopped && onStopped(reason);
       };
-      onStopConfirmed = settle;
-      setTimeout(settle, MUTE_STOP_WATCHDOG_MS);
+      onStopConfirmed = () => settle('onend');
+      setTimeout(() => settle('watchdog'), MUTE_STOP_WATCHDOG_MS);
       try {
         recognition.stop();
       } catch (err) {
         // 已經是停止狀態，忽略；直接視為已停止
         onStopConfirmed = null;
-        settle();
+        settle('stop-threw');
       }
     },
     // 播報結束後呼叫。只有在所有重疊的播報都結束（計數歸零）才真的恢復收音。

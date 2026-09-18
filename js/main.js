@@ -146,7 +146,8 @@ function applyAction(team, delta, source) {
 
   const text = buildAnnouncement(match, events, teamNames);
   logDebug(`applyAction[${source}] ${team} ${delta} -> "${text}"`);
-  voiceInput.mute(() => {
+  voiceInput.mute((reason) => {
+    logDebug(`mute:confirmed:${reason}`);
     speak(text, {
       onEnd: () => voiceInput.unmute(),
       onDebug: (stage) => logDebug(`speak:${stage}`),
