@@ -132,14 +132,25 @@ voiceToggleBtn.addEventListener('click', () => {
   }
 });
 
+const debugLogEl = document.getElementById('debug-log');
+function logDebug(msg) {
+  const time = new Date().toISOString().slice(11, 23);
+  debugLogEl.textContent += `${time} ${msg}\n`;
+  debugLogEl.scrollTop = debugLogEl.scrollHeight;
+}
+
 function applyAction(team, delta) {
   if (!match) return;
   const events = delta > 0 ? match.addPoint(team) : match.subtractPoint(team);
   renderScoreboard(match, teamNames);
 
   const text = buildAnnouncement(match, events, teamNames);
+  logDebug(`applyAction ${team} ${delta} -> "${text}"`);
   voiceInput.mute();
-  speak(text, { onEnd: () => voiceInput.unmute() });
+  speak(text, {
+    onEnd: () => voiceInput.unmute(),
+    onDebug: (stage) => logDebug(`speak:${stage}`),
+  });
 
   if (events.some((e) => e.type === 'match_won')) {
     voiceInput.stop();

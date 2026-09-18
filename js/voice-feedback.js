@@ -28,17 +28,19 @@ const SPEAK_START_DELAY_MS = 150;
 // 用模組變數保留參考，播報完再釋放。
 let activeUtterance = null;
 
-export function speak(text, { onEnd } = {}) {
+export function speak(text, { onEnd, onDebug } = {}) {
+  const debug = (stage) => onDebug && onDebug(stage);
   let done = false;
-  const finish = () => {
+  const finish = (reason) => {
     if (done) return;
     done = true;
     activeUtterance = null;
+    debug(`finish:${reason}`);
     onEnd && onEnd();
   };
 
   if (!('speechSynthesis' in window)) {
-    finish();
+    finish('no-speechSynthesis');
     return;
   }
 
@@ -46,25 +48,28 @@ export function speak(text, { onEnd } = {}) {
   try {
     if (synth.speaking || synth.pending) synth.cancel();
   } catch (err) {
-    finish();
+    finish('cancel-error');
     return;
   }
 
+  debug('scheduled');
   setTimeout(() => {
     if (done) return;
     try {
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'zh-TW';
-      utter.onend = finish;
-      utter.onerror = finish;
+      utter.onstart = () => debug('started');
+      utter.onend = () => finish('onend');
+      utter.onerror = () => finish('onerror');
       activeUtterance = utter;
       synth.speak(utter);
+      debug('speak-called');
     } catch (err) {
-      finish();
+      finish('speak-throw');
     }
   }, SPEAK_START_DELAY_MS);
 
   // 保險：萬一 onend/onerror 真的沒觸發，逾時就強制視為播報完成，
   // 避免收音模式因此永久卡在靜音狀態
-  setTimeout(finish, SPEAK_WATCHDOG_MS);
+  setTimeout(() => finish('watchdog'), SPEAK_WATCHDOG_MS);
 }
