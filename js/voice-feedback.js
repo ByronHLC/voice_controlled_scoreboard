@@ -52,12 +52,13 @@ export function speak(text, { onEnd, onDebug } = {}) {
     return;
   }
 
-  debug('scheduled');
+  debug(`scheduled voices=${synth.getVoices().length}`);
   setTimeout(() => {
     if (done) return;
     try {
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'zh-TW';
+      debug(`about-to-speak voices=${synth.getVoices().length}`);
       utter.onstart = () => debug('started');
       utter.onend = () => finish('onend');
       utter.onerror = () => finish('onerror');

@@ -18,6 +18,22 @@ const undoBtn = document.getElementById('undo-btn');
 const resetBtn = document.getElementById('reset-btn');
 const voiceToggleBtn = document.getElementById('voice-toggle-btn');
 
+const debugLogEl = document.getElementById('debug-log');
+function logDebug(msg) {
+  const time = new Date().toISOString().slice(11, 23);
+  debugLogEl.textContent += `${time} ${msg}\n`;
+  debugLogEl.scrollTop = debugLogEl.scrollHeight;
+}
+
+// iOS Safari 的語音清單是非同步載入的，剛載入頁面時常常是空的；
+// 提早呼叫一次 getVoices() 觸發載入，並記錄 voiceschanged 時機方便比對
+if ('speechSynthesis' in window) {
+  logDebug(`voices-on-load voices=${window.speechSynthesis.getVoices().length}`);
+  window.speechSynthesis.onvoiceschanged = () => {
+    logDebug(`voiceschanged voices=${window.speechSynthesis.getVoices().length}`);
+  };
+}
+
 let match = null;
 let teamNames = null; // { A: '藍', B: '紅' }
 let colorIds = null; // { A: 'blue', B: 'red' }
@@ -131,13 +147,6 @@ voiceToggleBtn.addEventListener('click', () => {
     if (ok) voiceToggleBtn.textContent = '關閉收音模式';
   }
 });
-
-const debugLogEl = document.getElementById('debug-log');
-function logDebug(msg) {
-  const time = new Date().toISOString().slice(11, 23);
-  debugLogEl.textContent += `${time} ${msg}\n`;
-  debugLogEl.scrollTop = debugLogEl.scrollHeight;
-}
 
 function applyAction(team, delta, source) {
   if (!match) return;
