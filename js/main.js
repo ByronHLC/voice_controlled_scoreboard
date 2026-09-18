@@ -71,7 +71,7 @@ const voiceInput = createVoiceInput({
       showTranscript(`（${colorById(command.colorId)?.label ?? ''}隊未在本場比賽中，已忽略）`);
       return;
     }
-    applyAction(team, command.delta);
+    applyAction(team, command.delta, 'voice');
   },
 });
 
@@ -104,7 +104,7 @@ startBtn.addEventListener('click', () => {
 
 document.querySelectorAll('.controls button').forEach((btn) => {
   btn.addEventListener('click', () => {
-    applyAction(btn.dataset.team, Number(btn.dataset.delta));
+    applyAction(btn.dataset.team, Number(btn.dataset.delta), 'button');
   });
 });
 
@@ -139,13 +139,13 @@ function logDebug(msg) {
   debugLogEl.scrollTop = debugLogEl.scrollHeight;
 }
 
-function applyAction(team, delta) {
+function applyAction(team, delta, source) {
   if (!match) return;
   const events = delta > 0 ? match.addPoint(team) : match.subtractPoint(team);
   renderScoreboard(match, teamNames);
 
   const text = buildAnnouncement(match, events, teamNames);
-  logDebug(`applyAction ${team} ${delta} -> "${text}"`);
+  logDebug(`applyAction[${source}] ${team} ${delta} -> "${text}"`);
   voiceInput.mute(() => {
     speak(text, {
       onEnd: () => voiceInput.unmute(),
