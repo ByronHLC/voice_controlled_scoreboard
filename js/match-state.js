@@ -1,8 +1,8 @@
 import { getEngine } from './rules/index.js';
 
-export function createMatch(sportId) {
+export function createMatch(sportId, options = {}) {
   const engine = getEngine(sportId);
-  let state = engine.initState();
+  let state = engine.initState(options);
   const history = [];
 
   return {

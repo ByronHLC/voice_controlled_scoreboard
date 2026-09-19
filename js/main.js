@@ -2,7 +2,7 @@ import { COLORS, colorById } from './colors.js';
 import { createMatch } from './match-state.js';
 import { render as renderScoreboard, showTranscript, showRotationReminder } from './scoreboard-ui.js';
 import { createVoiceInput } from './voice-input.js';
-import { buildAnnouncement, shouldRemindRotation, speak } from './voice-feedback.js';
+import { buildAnnouncement, describeServeSide, shouldRemindRotation, speak } from './voice-feedback.js';
 import { createMicMeter } from './mic-meter.js';
 
 const SPORT_LABELS = { badminton: '羽球', tabletennis: '桌球', squash: '壁球', tennis: '網球' };
@@ -17,6 +17,18 @@ const startBtn = document.getElementById('start-match-btn');
 const undoBtn = document.getElementById('undo-btn');
 const resetBtn = document.getElementById('reset-btn');
 const voiceToggleBtn = document.getElementById('voice-toggle-btn');
+const sportSelect = document.getElementById('sport-select');
+const modeSelect = document.getElementById('mode-select');
+const badmintonServeConfig = document.getElementById('badminton-serve-config');
+
+// 只有羽球雙打才需要先選發球隊伍/發球邊
+function updateServeConfigVisibility() {
+  const show = sportSelect.value === 'badminton' && modeSelect.value === 'double';
+  badmintonServeConfig.classList.toggle('hidden', !show);
+}
+sportSelect.addEventListener('change', updateServeConfigVisibility);
+modeSelect.addEventListener('change', updateServeConfigVisibility);
+updateServeConfigVisibility();
 
 const debugLogEl = document.getElementById('debug-log');
 function logDebug(msg) {
@@ -128,7 +140,12 @@ startBtn.addEventListener('click', () => {
 
   colorIds = { A: aColor, B: bColor };
   teamNames = { A: colorById(aColor).label, B: colorById(bColor).label };
-  match = createMatch(sport);
+
+  const isBadmintonDouble = sport === 'badminton' && isDoubleMode;
+  const firstServeSide = isBadmintonDouble
+    ? document.getElementById('first-serve-side').value
+    : undefined;
+  match = createMatch(sport, { isDouble: isDoubleMode, firstServeSide });
 
   document.getElementById('panel-a').style.background = colorById(aColor).hex;
   document.getElementById('panel-b').style.background = colorById(bColor).hex;
@@ -138,6 +155,13 @@ startBtn.addEventListener('click', () => {
   setupScreen.classList.add('hidden');
   scoreboardScreen.classList.remove('hidden');
   renderScoreboard(match, teamNames);
+
+  if (isBadmintonDouble) {
+    const firstServeTeam = document.getElementById('first-serve-team').value;
+    const introText = describeServeSide({ team: firstServeTeam, side: firstServeSide }, teamNames);
+    showRotationReminder(introText);
+    speak(introText, { onDebug: (stage) => logDebug(`speak:${stage}`) });
+  }
 });
 
 document.querySelectorAll('.controls button').forEach((btn) => {
@@ -178,7 +202,12 @@ function applyAction(team, delta, source) {
 
   const rotationOpts = { isDouble: isDoubleMode, isAdd: delta > 0 };
   const text = buildAnnouncement(match, events, teamNames, rotationOpts);
-  showRotationReminder(shouldRemindRotation(events, rotationOpts) ? '請輪換發球位置' : null);
+  const serveSideEvent = events.find((e) => e.type === 'serve_side');
+  if (serveSideEvent) {
+    showRotationReminder(describeServeSide(serveSideEvent, teamNames));
+  } else {
+    showRotationReminder(shouldRemindRotation(events, rotationOpts) ? '請輪換發球位置' : null);
+  }
   logDebug(`applyAction[${source}] ${team} ${delta} -> "${text}"`);
   voiceInput.mute((reason) => {
     logDebug(`mute:confirmed:${reason}`);

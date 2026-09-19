@@ -5,6 +5,14 @@ export function shouldRemindRotation(events, { isDouble, isAdd } = {}) {
   return !events.some((e) => e.type === 'game_won' || e.type === 'match_won');
 }
 
+// 羽球雙打精確版：組出「[隊伍]隊，換發球邊，左/右邊發球」，跟現有「請換邊」
+// （兩隊互換場地端）刻意用不同詞，避免同一句裡「換邊」出現兩次卻意思不同
+export function describeServeSide(event, teamNames) {
+  const sideLabel = event.side === 'left' ? '左邊' : '右邊';
+  const switchedPart = event.switched ? '，換發球邊' : '';
+  return `${teamNames[event.team]}隊${switchedPart}，${sideLabel}發球`;
+}
+
 // 依比分事件組出要播報的中文句子
 export function buildAnnouncement(match, events, teamNames, opts = {}) {
   const matchWon = events.find((e) => e.type === 'match_won');
@@ -14,10 +22,15 @@ export function buildAnnouncement(match, events, teamNames, opts = {}) {
   if (gameWon) {
     let text = `這一局，${teamNames[gameWon.winner]}隊獲勝`;
     if (events.some((e) => e.type === 'side_switch')) text += '，請換邊';
+    const gameWonServeSide = events.find((e) => e.type === 'serve_side');
+    if (gameWonServeSide) text += `，${describeServeSide(gameWonServeSide, teamNames)}`;
     return text;
   }
 
-  const rotationSuffix = shouldRemindRotation(events, opts) ? '，請輪換發球位置' : '';
+  const serveSide = events.find((e) => e.type === 'serve_side');
+  const rotationSuffix = serveSide
+    ? `，${describeServeSide(serveSide, teamNames)}`
+    : shouldRemindRotation(events, opts) ? '，請輪換發球位置' : '';
 
   if (events.some((e) => e.type === 'side_switch')) {
     return `${match.engine.getSpokenScore(match.getState(), teamNames)}，請換邊${rotationSuffix}`;
